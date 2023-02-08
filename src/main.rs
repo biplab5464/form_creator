@@ -1,5 +1,7 @@
-#[macro_use] extern crate rocket;
+//#[macro_use] extern crate rocket;   //uncomment to use server mode and vice versa
 
+use std::fs::File;                // uncomment to use non_server mode
+use std::io::Write;               //  uncomment to use non_server mode
 
 trait Build{
     fn build(&self) -> String;
@@ -20,7 +22,7 @@ impl Form{
     }
 }
 
-struct Text_box{
+struct TextBox{
     id : String,
     label : String,
     css_class : String, // class for the the Radio button
@@ -29,19 +31,20 @@ struct Text_box{
     default : Option<String>
 }
 
-impl Build for Text_box{
+impl Build for TextBox{
     fn build(&self) -> String{
         /*
             <label for="fname">First name:</label>
             <input type="text" id="fname" name="fname ">
         */
-        let id = self.id.clone();
-        let label = self.label.clone();
+        let id = &self.id;
+        let label = &self.label;
+        let css_class = &self.css_class;
 
         //--------------------------------------------------------------------
         //**base html
         let mut return_str : String = format!{"<label for=\"{id}\">{label}</label>
-            <input type=\"text\" id=\"{id}\" name=\"{id}\""};
+            <input type=\"text\" css_class=\"{css_class}\" id=\"{id}\" name=\"{id}\""};
 
         //++ requried
         if self.required {
@@ -53,7 +56,7 @@ impl Build for Text_box{
             return_str = format!("{return_str} disabled")
         }
 
-        //++ value="Doe"
+        //++ value="Doe"  (might have potencial problem --when refreshed change to defalut )
         if let Some(str) = &self.default{
             return_str = format!("{return_str} value=\"{str}\"")
         }
@@ -66,18 +69,18 @@ impl Build for Text_box{
 }
 
 
-struct Radio_button{
+struct RadioButton{
     id : String,
     label : String,
     option : Vec<String>,
-    onNewLine : bool, //the choice will be on new line
+    on_new_line : bool, //the choice will be on new line
     css_class : String, // class for the the Radio button
     disabled : bool,
     required : bool,
     default : Option<String>
 }
 
-impl Build for Radio_button{
+impl Build for RadioButton{
     fn build(&self) -> String{
         /*
             --in a loop
@@ -89,18 +92,35 @@ impl Build for Radio_button{
             <label for="javascript">JavaScript</label>
         */
         //println!("hello from radio");
-        let id = self.id.clone();
-        let label = self.label.clone();
+        let id = &self.id;
+        let label = &self.label;
+
+        //------------------------------------------------------
         let mut return_str = String::new();
         return_str = format!("<label for=\"{id}\">{label}</label> </br>");
         for ele in self.option.iter(){
             //println!("log");
-            return_str = format!{"{return_str}<input type=\"radio\" id=\"{ele}\" name=\"{id}\" value=\"{ele}\">
-            <label for=\"{ele}\">{ele}</label>"};
-            if self.onNewLine{
+            return_str = format!{"{return_str}<input type=\"radio\" id=\"{ele}\" name=\"{id}\" value=\"{ele}\""};
+
+            //--checked (might have potencial problem --when refreshed change to defalut )
+            if let Some(str) = &self.default{
+                if str == ele{
+                    return_str = format!("{return_str} checked")
+                }
+            }
+            //++ disabled
+            if self.disabled {
+                return_str = format!("{return_str} disabled")
+            }
+
+            return_str = format!("{return_str} ><label for=\"{ele}\">{ele}</label>");
+
+            //++ on new line
+            if self.on_new_line{
                 return_str = format!("{return_str} </br>");
             }
         }
+        //------------------------------------------------------
         format!("{return_str} </br>")
     }
 }
@@ -108,7 +128,7 @@ struct Checkbox{
     id : String,
     label : String,
     option : Vec<String>,
-    onNewLine : bool,
+    on_new_line : bool,
     css_class : String, // class for the the Radio button
     disabled : bool,
     required : bool,
@@ -126,19 +146,37 @@ impl Build for Checkbox{
             <input type="checkbox" id="javascript" name="fav_language" value="JavaScript">
             <label for="javascript">JavaScript</label>
         */
-        let id = self.id.clone();
-        let label = self.label.clone();
+        let id = &self.id;
+        let label = &self.label;
+        //----------------------------------------------------------------------
         let mut return_str = String::new();
         return_str = format!("<label for=\"{id}\">{label}</label> </br>");
         for ele in self.option.iter(){
             //println!("log");
-            return_str = format!{"{return_str}<input type=\"checkbox\" id=\"{ele}\" name=\"{id}\" value=\"{ele}\">
-            <label for=\"{ele}\">{ele}</label>"};
+            return_str = format!{"{return_str}<input type=\"checkbox\" id=\"{ele}\" name=\"{id}\" value=\"{ele}\""};
 
-            if  self.onNewLine{
+
+            //--checked (might have potencial problem --when refreshed change to defalut ) (do this need perf encance like (removind ele already searched))
+            if let Some(vec) = &self.default{
+                    if vec.contains(ele){ 
+                        return_str = format!("{return_str} checked")
+                    }
+            }
+
+            //++ disabled
+            if self.disabled {
+            return_str = format!("{return_str} disabled")
+            }
+
+
+            return_str = format!("{return_str} ><label for=\"{ele}\">{ele}</label>");
+
+            //++ new line
+            if  self.on_new_line{
                 return_str = format!("{return_str} </br>");
             }
         }
+        //----------------------------------------------------------------------
         format!("{return_str}</br>")
     }
 }
@@ -162,13 +200,15 @@ impl Build for Date{
             </form> 
         */
 
-        let id = self.id.clone();
-        let label = self.label.clone();
+        let id = &self.id;
+        let label = &self.label;
+
+        //-------------------------------------------------
         let return_str : String = format!{"<label for=\"{id}\">{label}</label>
             <input type=\"date\" id=\"{id}\" name=\"{id}\""};
 
 
-
+        //-------------------------------------------------
         format!("{return_str} > </br>")
     }
 
@@ -193,95 +233,47 @@ impl Build for Date_time{
             </form> 
         */
 
-        let id = self.id.clone();
-        let label = self.label.clone();
+        let id = &self.id;
+        let label = &self.label;
+
+        //----------------------------------------------------------------
         let return_str : String = format!{"<label for=\"{id}\">{label}</label>
             <input type=\"datetime-local\" id=\"{id}\" name=\"{id}\""};
 
-
+        //----------------------------------------------------------------
         format!("{return_str} > </br>")
     }
 
 }
 
 
-//fn main() {
-    // let textbox = Text_box{
-    //     id : String::from("name"),
-    //     label : String::from("Enter your name :")
-    // };
-    // let radio = Radio_button{
-    //     id : String::from("radio_btn"),
-    //     label : String::from("Enter your prefer language :"),
-    //     option : vec![String::from("rust"),String::from("js")],
-    //     onNewLine : false 
 
-    // };
-    // let chcekbox = Checkbox{
-    //     id : String::from("radio_btn"),
-    //     label : String::from("Enter your prefer language :"),
-    //     option : vec![String::from("rust"),String::from("js")],
-    //     onNewLine : true
-    // };
-    //println!("{}  {} {}",textbox.build(), radio.build(),chcekbox.build());
+//%%%%%%% THIS IS NON_SERVER MODE %%%%%%%%%%%%%%%
+fn main() {
+    /*let textbox = TextBox{
+        id : String::from("name"),
+        label : String::from("Enter your name :")
+    };
+    let radio = RadioButton{
+        id : String::from("radio_btn"),
+        label : String::from("Enter your prefer language :"),
+        option : vec![String::from("rust"),String::from("js")],
+        on_new_line : false 
 
-    // let my_form = Form{
-    //     components : vec![
-    //         Box::new(
-    //             Text_box{
-    //                 id : String::from("name"),
-    //                 label : String::from("Enter your name :"),
-    //                 css_class : String::from("blank"), // class for the the Radio button
-    //                 disabled : false,
-    //                 required : true,
-    //                 default : None,
-    //             }
-    //         ),
-    //         Box::new(
-    //             Checkbox{
-    //                 id : String::from("radio_btn"),
-    //                 label : String::from("Enter your prefer ide :"),
-    //                 option : vec![String::from("eclispe"),String::from("visual code"),String::from("sublime text"),String::from("vim")],
-    //                 onNewLine : true,
-    //                 css_class : String::from("blank"), // class for the the Radio button
-    //                 disabled : false,
-    //                 required : false,
-    //                 default : None,
-    //             }
-    //         ),
-    //         Box::new(
-    //             Radio_button{
-    //                 id : String::from("checkbox"),
-    //                 label : String::from("Enter your prefer language :"),
-    //                 option : vec![String::from("rust"),String::from("js")],
-    //                 onNewLine : false,
-    //                 css_class : String::from("blank"), // class for the the Radio button
-    //                 disabled : false,
-    //                 required : false,
-    //                 default : None,
+    };
+    let chcekbox = Checkbox{
+        id : String::from("radio_btn"),
+        label : String::from("Enter your prefer language :"),
+        option : vec![String::from("rust"),String::from("js")],
+        on_new_line : true
+    }
+    println!("{}  {} {}",textbox.build(), radio.build(),chcekbox.build());
+    */
 
-    //             }
-    //         )
-    //     ]
-    // };
-
-    // println!("{}",my_form.run());
-    
-//}
-
-#[launch]
-fn rocket() -> _ {
-    let server = rocket::build();
-
-    server.mount("/",routes![get_form])
-}
-
-#[get("/")]
-fn get_form() -> String{
     let my_form = Form{
         components : vec![
             Box::new(
-                Text_box{
+                TextBox{
                     id : String::from("name"),
                     label : String::from("Enter your name :"),
                     css_class : String::from("blank"), // class for the the Radio button
@@ -295,31 +287,94 @@ fn get_form() -> String{
                     id : String::from("radio_btn"),
                     label : String::from("Enter your prefer ide :"),
                     option : vec![String::from("eclispe"),String::from("visual code"),String::from("sublime text"),String::from("vim")],
-                    onNewLine : true,
+                    on_new_line : true,
                     css_class : String::from("blank"), // class for the the Radio button
-                    disabled : false,
+                    disabled : true,
                     required : false,
-                    default : None,
+                    default : Some(vec![String::from("vim"),String::from("visual code")]),
                 }
             ),
             Box::new(
-                Radio_button{
+                RadioButton{
                     id : String::from("checkbox"),
                     label : String::from("Enter your prefer language :"),
                     option : vec![String::from("rust"),String::from("js")],
-                    onNewLine : false,
+                    on_new_line : false,
                     css_class : String::from("blank"), // class for the the Radio button
-                    disabled : false,
+                    disabled : true,
                     required : false,
-                    default : None,
+                    default : Some(String::from("rust")),
 
                 }
             )
         ]
     };
 
-    //println!("{}",my_form.run());
-    my_form.run()
+    let html_form  = my_form.run();
+
+    println!("{}",html_form);
+
+    let mut file = File::create("static/index.html").expect("problem in opening file");
+    file.write_all(html_form.as_bytes()).expect("problem in writeing of file");
 }
+//%%%%%%% THIS IS NON_SERVER MODE %%%%%%%%%%%%%%%
+
+
+//%%%%%%% THIS IS SERVER MODE %%%%%%%%%%%%%% 
+//  ALSO UNCOMMENT THE #[macro_use] extern crate rocket; *** IT IS ON THE TOP
+
+// #[launch]
+// fn rocket() -> _ {
+//     let server = rocket::build();
+
+//     server.mount("/",routes![get_form])
+// }
+
+// #[get("/")]
+// fn get_form() -> String{
+//     let my_form = Form{
+//         components : vec![
+//             Box::new(
+//                 TextBox{
+//                     id : String::from("name"),
+//                     label : String::from("Enter your name :"),
+//                     css_class : String::from("blank"), // class for the the Radio button
+//                     disabled : true,
+//                     required : true,
+//                     default : Some(String::from("joe")),
+//                 }
+//             ),
+//             Box::new(
+//                 Checkbox{
+//                     id : String::from("radio_btn"),
+//                     label : String::from("Enter your prefer ide :"),
+//                     option : vec![String::from("eclispe"),String::from("visual code"),String::from("sublime text"),String::from("vim")],
+//                     on_new_line : true,
+//                     css_class : String::from("blank"), // class for the the Radio button
+//                     disabled : false,
+//                     required : false,
+//                     default : None,
+//                 }
+//             ),
+//             Box::new(
+//                 RadioButton{
+//                     id : String::from("checkbox"),
+//                     label : String::from("Enter your prefer language :"),
+//                     option : vec![String::from("rust"),String::from("js")],
+//                     on_new_line : false,
+//                     css_class : String::from("blank"), // class for the the Radio button
+//                     disabled : false,
+//                     required : false,
+//                     default : None,
+
+//                 }
+//             )
+//         ]
+//     };
+
+//     //println!("{}",my_form.run());
+//     my_form.run()
+// }
+//%%%%%%% THIS IS SERVER MODE %%%%%%%%%%%%%%
 
 
