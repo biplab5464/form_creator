@@ -3,8 +3,12 @@
 use std::fs::File;                // uncomment to use non_server mode
 use std::io::Write;               //  uncomment to use non_server mode
 
+use json::{object::Object,JsonValue};
+
+
 trait Build{
     fn build(&self) -> String;
+    fn get_id(&self) -> (u8,String);
 }
 
 struct Form{
@@ -19,6 +23,28 @@ impl Form{
             return_str = format!("{}{}",return_str,ele.build());
         }
         return return_str;
+    }
+
+    fn get_json_id(&self) -> String{
+
+        let mut json_id = Object::new();
+
+        for ele in self.components.iter(){
+            let id = ele.get_id();
+            match id.0 {
+                10 => {
+
+                    json_id.insert(id.1.as_str(),JsonValue::String(String::new()))
+                },
+                11 => {
+
+                    json_id.insert(id.1.as_str(),JsonValue::Array(Vec::new()))
+                },
+                _ => {}
+            }
+        }
+
+        json_id.dump()
     }
 }
 
@@ -65,6 +91,10 @@ impl Build for TextBox{
         //----------------------------------------------------------------
         //retrun statment
         format!("{return_str} > </br>")
+    }
+
+    fn get_id(&self) -> (u8,String){
+        (10,self.id.clone())
     }
 }
 
@@ -123,7 +153,13 @@ impl Build for RadioButton{
         //------------------------------------------------------
         format!("{return_str} </br>")
     }
+
+    fn get_id(&self) -> (u8,String){
+        (10,self.id.clone())
+    }
 }
+
+
 struct Checkbox{
     id : String,
     label : String,
@@ -179,6 +215,10 @@ impl Build for Checkbox{
         //----------------------------------------------------------------------
         format!("{return_str}</br>")
     }
+
+    fn get_id(&self) -> (u8,String){
+        (11,self.id.clone())
+    }
 }
 
 struct Date{
@@ -223,6 +263,10 @@ impl Build for Date{
         }
         //-------------------------------------------------
         format!("{return_str} > </br>")
+    }
+
+    fn get_id(&self) -> (u8,String){
+        (10,self.id.clone())
     }
 
 }
@@ -271,6 +315,10 @@ impl Build for Date_time{
         format!("{return_str} > </br>")
     }
 
+    fn get_id(&self) -> (u8,String){
+        (10,self.id.clone())
+    }
+
 }
 
 struct ComboBox{
@@ -312,6 +360,10 @@ impl Build for ComboBox{
         //----------------------------------------------------------------------
         format!("{return_str}</select> </br>")
     }
+
+    fn get_id(&self) -> (u8,String){
+        (11,self.id.clone())
+    }
 }
 
 //%%%%%%% THIS IS NON_SERVER MODE %%%%%%%%%%%%%%%
@@ -350,7 +402,7 @@ fn main() {
             ),
             Box::new(
                 Checkbox{
-                    id : String::from("radio_btn"),
+                    id : String::from("my_checkbox__test"),
                     label : String::from("Enter your prefer ide :"),
                     option : vec![String::from("eclispe"),String::from("visual code"),String::from("sublime text"),String::from("vim")],
                     on_new_line : true,
@@ -362,7 +414,7 @@ fn main() {
             ),
             Box::new(
                 RadioButton{
-                    id : String::from("checkbox"),
+                    id : String::from("my_radio_test"),
                     label : String::from("Enter your prefer language :"),
                     option : vec![String::from("rust"),String::from("js")],
                     on_new_line : false,
@@ -375,7 +427,7 @@ fn main() {
             ),
             Box::new(
                 Date{
-                    id : String::from("date"),
+                    id : String::from("date_test"),
                     label : String::from("Enter the date :"),
                     css_class : String::from("blank"), // class for the the Radio button
                     disabled : false,
@@ -385,7 +437,7 @@ fn main() {
             ),
             Box::new(
                 Date_time{
-                    id : String::from("date_time"),
+                    id : String::from("date_time_test"),
                     label : String::from("Enter the date time :"),
                     css_class : String::from("blank"), // class for the the Radio button
                     disabled : false,
@@ -395,7 +447,7 @@ fn main() {
             ),
             Box::new(
                 ComboBox{
-                    id : String::from("combo"),
+                    id : String::from("combo_test"),
                     label : String::from("Enter your prefer ide :"),
                     option : vec![String::from("eclispe"),String::from("visual code"),String::from("sublime text"),String::from("vim")],
                     css_class : String::from("blank"), // class for the the Radio button
@@ -407,12 +459,14 @@ fn main() {
         ]
     };
 
-    let html_form  = my_form.run();
+    // let html_form  = my_form.run();
 
-    println!("{}",html_form);
+    // println!("{}",html_form);
 
-    let mut file = File::create("static/index.html").expect("problem in opening file");
-    file.write_all(html_form.as_bytes()).expect("problem in writeing of file");
+    // let mut file = File::create("static/index.html").expect("problem in opening file");
+    // file.write_all(html_form.as_bytes()).expect("problem in writeing of file");
+
+    println!("{}",my_form.get_json_id());
 }
 //%%%%%%% THIS IS NON_SERVER MODE %%%%%%%%%%%%%%%
 
