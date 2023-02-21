@@ -474,6 +474,7 @@ impl Build for ComboBox{
 //%%%%%%% THIS IS NON_SERVER MODE %%%%%%%%%%%%%%%
 
 
+//%%%%%%% THIS IS NON_SERVER MODE WITH JSON %%%%%%%%%%%%%%%
 fn main() {
 
     let json = json::parse(r#"
@@ -586,7 +587,12 @@ fn main() {
         form : json
     };
 
-    println!("{}",my_form.run());
+    let html_form = my_form.run();
+
+    let mut file = File::create("static/index.html").expect("problem in opening file");
+    file.write_all(html_form.as_bytes()).expect("problem in writeing of file");
+
+    println!("{}",html_form);
     println!("{}",my_form.get_json_id());
 
 
@@ -598,6 +604,7 @@ fn main() {
 
 
 }
+//%%%%%%% THIS IS NON_SERVER MODE WITH JSON %%%%%%%%%%%%%%%
 
 //%%%%%%% THIS IS SERVER MODE %%%%%%%%%%%%%% 
 //  ALSO UNCOMMENT THE '#[macro_use] extern crate rocket;' *** IT IS ON THE TOP
