@@ -1,7 +1,6 @@
 use json::{*,JsonValue,object::Object};
 
 
-
 pub struct FormJson{
 	pub form : JsonValue
 }
